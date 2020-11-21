@@ -9,13 +9,39 @@ import * as utc from "dayjs/plugin/utc";
 dayjs.extend(utc);
 
 interface S3StreamLoggerOptions {
+    /**
+     * AWS access key ID.
+     */
     accessKeyId: Credentials["accessKeyId"];
+    /**
+     * AWS secret access key.
+     */
     secretAccessKey: Credentials["secretAccessKey"];
+    /**
+     * The endpoint URI to send requests to. The default endpoint is built from the configured region.
+     * The endpoint should be a string like 'https://{service}.{region}.amazonaws.com' or an Endpoint object.
+     */
     endpoint?: S3["config"]["endpoint"];
+    /**
+     * Whether SSL is enabled for requests.
+     */
     sslEnabled?: S3["config"]["sslEnabled"];
+    /**
+     * The region to send service requests to.
+     */
     region?: S3["config"]["region"];
+    /**
+     * Whether the provided endpoint addresses an individual bucket.
+     * false if it addresses the root API endpoint.
+     */
     s3BucketEndpoint?: S3["config"]["s3BucketEndpoint"];
+    /**
+     * The s3 bucket name
+     */
     bucket: string;
+    /**
+     * Folder to be apended in the key of the log
+     */
     folder?: string;
     /**
      * Environment for Formatting file Name
@@ -38,19 +64,38 @@ interface S3StreamLoggerOptions {
      * Default: 10*1000 = 10kb
      */
     bufferSize?: number;
+    /**
+     * serverSideEncryption for S3
+     */
     serverSideEncryption?: S3.PutObjectRequest["ServerSideEncryption"];
+    /**
+     * acl for S3
+     */
     acl?: S3.PutObjectRequest["ACL"];
+    /**
+     * Enable compression of the logs
+     */
     compress?: boolean;
     /**
      * default to 60 minutes
      */
     rotateEvery?: number;
     /**
-     * or 200k, whichever is sooner
+     * Number in bytes
+     * defaults to 200 * 1000 = 200kb
      */
     maxFileSize?: number;
+    /**
+     * storageClass for S3
+     */
     storageClass?: S3.PutObjectRequest["StorageClass"];
+    /**
+     * Container for the TagSet and Tag elements
+     */
     tags?: Record<string, string>;
+    /**
+     * Should save logs in JSON format
+     */
     saveLogsInJSON?: boolean;
 }
 
@@ -101,7 +146,7 @@ export class S3StreamLogger extends Writable {
         this.acl = options.acl;
         this.compress = options.compress || false;
         this.rotateEvery = options.rotateEvery || 60 * 60 * 1000; // default to 60 minutes
-        this.maxFileSize = options.maxFileSize || 200000; // or 200k, whichever is sooner
+        this.maxFileSize = options.maxFileSize || 200 * 1000; // or 200k, whichever is sooner
 
         this.environment = options.environment || process.env.NODE_ENV || "development";
 

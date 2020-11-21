@@ -1,28 +1,26 @@
 ### This respository is based on [s3-streamlogger](https://github.com/Coggle/s3-streamlogger).
 
 ## s3-streamlogger-ts
-[![NPM version](https://badge.fury.io/js/s3-streamlogger.svg)](http://badge.fury.io/js/s3-streamlogger)
+[![npm version](https://badge.fury.io/js/%40austonpramodh%2Fs3-streamlogger-ts.svg)](https://badge.fury.io/js/%40austonpramodh%2Fs3-streamlogger-ts)
 
 
 A Writable Stream object that uploads to s3 objects, periodically rotating to a
 new object name.
 
-See also [tails3](http://github.com/coggle/tails3) for a script to tail the log
-files produced by s3-streamlogger.
 
 ### Installation
 ```bash
-npm install --save s3-streamlogger
+npm install --save @austonpramodh/s3-streamlogger-ts
 ```
 
 ### Basic Usage
 ```js
-var S3StreamLogger = require('s3-streamlogger').S3StreamLogger;
+import { S3StreamLogger } from "@austonpramodh/s3-streamlogger-ts";
 
-var s3stream = new S3StreamLogger({
-             bucket: "mys3bucket",
-      access_key_id: "...",
-  secret_access_key: "..."
+const s3stream = new S3StreamLogger({
+    bucket: "mys3bucket",
+    accessKeyId: "...",
+    secretAccessKey: "..."
 });
 
 s3stream.write("hello S3");
@@ -31,41 +29,41 @@ s3stream.write("hello S3");
 ### Use with Winston: Log to S3
 ```sh
 npm install --save winston
-npm install --save s3-streamlogger
+npm install --save @austonpramodh/s3-streamlogger-ts
 ```
 
 ```js
-var winston        = require('winston');
-var S3StreamLogger = require('s3-streamlogger').S3StreamLogger;
+import { transports, createLogger } from "winston";
+import { S3StreamLogger } from "@austonpramodh/s3-streamlogger-ts";
 
-var s3_stream = new S3StreamLogger({
-             bucket: "mys3bucket",
-      access_key_id: "...",
-  secret_access_key: "..."
+const s3stream = new S3StreamLogger({
+    bucket: "mys3bucket",
+    accessKeyId: "...",
+    secretAccessKey: "..."
 });
 
-var transport = new (winston.transports.Stream)({
-  stream: s3_stream
-});
+const transport = new transports.Stream({ stream: s3_stream })
+
 // see error handling section below
 transport.on('error', function(err){/* ... */});
 
-var logger = winston.createLogger({
+const logger = createLogger({
   transports: [transport]
 });
 
 logger.info('Hello Winston!');
 ```
 
+
 ### Define subfolder
 ```js
-var S3StreamLogger = require('s3-streamlogger').S3StreamLogger;
+import { S3StreamLogger } from "@austonpramodh/s3-streamlogger-ts";
 
-var s3stream = new S3StreamLogger({
-             bucket: "mys3bucket",
-             folder: "my/nested/subfolder",
-      access_key_id: "...",
-  secret_access_key: "..."
+const s3stream = new S3StreamLogger({
+    bucket: "mys3bucket",
+    accessKeyId: "...",
+    secretAccessKey: "...",
+    folder: "my/nested/subfolder"
 });
 
 s3stream.write("hello S3");
@@ -73,41 +71,30 @@ s3stream.write("hello S3");
 
 ### Assign tags
 ```js
-var S3StreamLogger = require('s3-streamlogger').S3StreamLogger;
+import { S3StreamLogger } from "@austonpramodh/s3-streamlogger-ts";
 
-var s3stream = new S3StreamLogger({
-             bucket: "mys3bucket",
-             folder: "my/nested/subfolder",
-               tags: {type: 'myType', project: 'myProject'},
-      access_key_id: "...",
-  secret_access_key: "..."
+const s3stream = new S3StreamLogger({
+    bucket: "mys3bucket",
+    accessKeyId: "...",
+    secretAccessKey: "...",
+    folder: "my/nested/subfolder",
+    tags: {type: 'myType', project: 'myProject'},
 });
 
 s3stream.write("hello S3");
-```
-
-### Add hostname information for tails3
-tails3 expects messages to be logged as json (the default for the file
-transport), with hostname and (for critical errors), stack properties to each
-log object, in addition to the standard timestamp, level and message
-properties. You can provide these using the third "metadata" option to
-winston's log method:
-
-```js
-logger.log(level, message, {hostname: ... , stack: ...});
 ```
 
 ### Handling logging errors
 When there is an error writing to s3, the stream emits an 'error' event with
 details. You should take care **not** to log these errors back to the same
 stream (as that is likely to cause infinite recursion). Instead log them to the
-console, to a file, or to SNS using [winston-sns](https://github.com/jesseditson/winston-sns).
+console, to a file.
 
 Note that these errors will result in uncaught exceptions unless you have an
 `error` event handler registered, for example:
 
 ```js
-s3_stream.on('error', function(err){
+s3stream.on('error', function(err){
     // there was an error!
     some_other_logging_transport.log('error', 'logging transport error', err)
 });
@@ -118,14 +105,13 @@ attaches its own error handler to the stream, so you do not need your own,
 however it will re-emit the errors on itself which must be handled instead:
 
 ```js
-var transport = new (winston.transports.Stream)({
-  stream: s3_stream
-});
+const transport = new transports.Stream({ stream: s3_stream })
+
 transport.on('error', function(err){
   /* handle s3 stream errors (e.g. invalid credentials, EHOSTDOWN) here */
 });
 
-var logger = winston.createLogger({
+const logger = createLogger({
   transports: [transport]
 });
 ```
@@ -163,11 +149,7 @@ supported by the AWS SDK.
 Configuration object for the AWS SDK. The full list of options is available on the [AWS SDK Configuration Object page](http://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html). This is an alternative to using access_key_id and secret_access_key and is overwritten by them if both are used.
 
 #### name_format
-Format of file names to create, accepts [strftime specifiers](https://github.com/samsonjs/strftime). Defaults to `"%Y-%m-%d-%H-%M-%S-%L-<current git branch>-<hostname>.log"`. The Date() used to fill the format specifiers is created with the current UTC time, but still *has the current timezone*, so any specifiers that perform timezone conversion will return incorrect dates.
-
-If you use a format of the form `%Y-%m-%d-%H-%M-<stage>-<hostname>.log`, then
-you can use [tails3](http://github.com/coggle/tails3) to tail the log files
-being generated by `S3StreamLogger`.
+Format of file names to create, accepts [strftime specifiers](https://github.com/samsonjs/strftime). Defaults to `"YYYY-MMM-DD-HH-mm-<NODE_ENV>-<hostname>.log"`. The Date() used to fill the format specifiers is created with the current UTC time, but still *has the current timezone*, so any specifiers that perform timezone conversion will return incorrect dates.
 
 If `compress` is set to true, then the default extension is `.log.gz` instead of
 `.log`.
@@ -177,21 +159,21 @@ Files will be rotated every `rotate_every` milliseconds. Defaults to 3600000 (60
 minutes).
 
 #### max_file_size
-Files will be rotated when they reach `max_file_size` bytes. Defaults to 200 KB.
+Files will be rotated when they reach `maxFileSize` bytes. Defaults to 200 KB.
 
-#### upload_every
-Files will be uploaded every `upload_every` milliseconds. Defaults to 20
+#### uploadDelay
+Files will be uploaded every `uploadDelay` milliseconds. Defaults to 20
 seconds.
 
-#### buffer_size
-Files will be uploaded if the un-uploaded data exceeds `buffer_size` bytes.
+#### bufferSize
+Files will be uploaded if the un-uploaded data exceeds `bufferSize` bytes.
 Defaults to 10 KB.
 
-#### server_side_encryption
+#### serverSideEncryption
 The server side encryption `AES256` algorithm used when storing objects in S3.
 Defaults to false.
 
-#### storage_class
+#### storageClass
 The S3 StorageClass (STANDARD, REDUCED_REDUNDANCY, etc.). If omitted, no value
 is used and aws-sdk will fill in its default.
 
@@ -204,5 +186,6 @@ If true, the files will be gzipped before uploading (may reduce s3 storage costs
 Defaults to false.
 
 ### License
-[ISC](http://opensource.org/licenses/ISC): equivalent to 2-clause BSD.
+<!-- [ISC](http://opensource.org/licenses/ISC): equivalent to 2-clause BSD. -->
+UNLICENSED
 
